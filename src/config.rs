@@ -17,7 +17,7 @@ pub struct Config {
 impl Config {
     pub fn read_config() -> Result<Self> {
         let file = std::env::current_dir()
-            .and_then(|v| Ok(v.join("settings.toml")))
+            .map(|v| v.join("settings.toml"))
             .into_diagnostic()?;
         let contents = std::fs::read_to_string(file).into_diagnostic()?;
 
@@ -28,7 +28,7 @@ impl Config {
         let contents = toml::to_string(config).into_diagnostic()?;
 
         let path = std::env::current_dir()
-            .and_then(|v| Ok(v.join("settings.toml")))
+            .map(|v| v.join("settings.toml"))
             .into_diagnostic()?;
 
         File::create(path)

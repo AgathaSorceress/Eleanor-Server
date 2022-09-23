@@ -10,7 +10,7 @@ use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 /// If no files have been created in the current directory, the app is running for the first time
 pub fn is_first_run() -> Result<bool> {
     let path = std::env::current_dir()
-        .and_then(|v| Ok(v.join("settings.toml")))
+        .map(|v| v.join("settings.toml"))
         .into_diagnostic()?;
 
     Ok(!path.exists())

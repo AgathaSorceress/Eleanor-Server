@@ -13,6 +13,7 @@ pub struct Model {
     pub source_id: i32,
     pub hash: u32,
     pub artist: Option<String>,
+    pub album_artist: Option<String>,
     pub name: Option<String>,
     pub album: Option<String>,
     pub duration: u32,
