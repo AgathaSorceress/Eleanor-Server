@@ -111,7 +111,7 @@ pub async fn index_source(source: Source, mode: IndexMode, db: &DatabaseConnecti
 
         library::Entity::insert(song)
             .on_conflict(
-                sea_query::OnConflict::column(library::Column::Filename)
+                sea_query::OnConflict::column(library::Column::Hash)
                     .do_nothing()
                     .to_owned(),
             )
