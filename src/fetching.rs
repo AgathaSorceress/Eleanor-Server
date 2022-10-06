@@ -100,7 +100,10 @@ pub async fn index_source(source: Source, mode: IndexMode, db: &DatabaseConnecti
             album: Set(tags.and_then(|t| t.album()).map(|t| t.to_string())),
             genres: Set(tags.and_then(|t| t.genre()).map(|t| t.to_string())),
             track: Set(tags.and_then(|t| t.track()).map(|t| t as i32)),
-            year: Set(tags.and_then(|t| t.year()).map(|t| t as i32)),
+            year: Set(tags
+                .and_then(|t| t.year())
+                .map(|t| if t == 0 { None } else { Some(t as i32) })
+                .flatten()),
             duration: Set(properties
                 .duration()
                 .as_millis()
