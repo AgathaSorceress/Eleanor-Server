@@ -1,6 +1,6 @@
 [package]
 name = "eleanor-server"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Agatha Lovelace <agatha@technogothic.net>"]
 
@@ -9,8 +9,7 @@ authors = ["Agatha Lovelace <agatha@technogothic.net>"]
 [dependencies]
 adler = "1.0.2"
 argon2 = "0.4.1"
-axum = "0.5.15"
-axum-auth = "0.3.0"
+axum = { version = "0.5.15", features = ["headers"] }
 clap = { version = "3.2.20", features = ["cargo"] }
 lofty = "0.7.3"
 miette = { version = "5.2.0", features = ["fancy"] }

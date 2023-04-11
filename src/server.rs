@@ -7,7 +7,8 @@ use argon2::{
     Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
 };
 use axum::{
-    extract::{FromRequest, Path, RequestParts},
+    extract::{Path, RequestParts},
+    headers::{authorization::Basic, Authorization, HeaderMapExt},
     http::{
         header::{self, HeaderName},
         Request, StatusCode,
@@ -17,7 +18,6 @@ use axum::{
     routing::get,
     Extension, Router,
 };
-use axum_auth::AuthBasic;
 use miette::{miette, IntoDiagnostic};
 use paris::success;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, ModelTrait, QueryFilter, Set};
@@ -101,7 +101,13 @@ pub async fn add_user(
     password: String,
 ) -> miette::Result<()> {
     let salt = SaltString::generate(&mut OsRng);
-    let argon2 = Argon2::default();
+    let argon2 = Argon2::new(
+        argon2::Algorithm::Argon2id,
+        argon2::Version::V0x13,
+        argon2::Params::new(16384, 3, 1, None).map_err(|err| {
+            return miette!("Couldn't initialize argon2 parameters: {}", err.to_string());
+        })?,
+    );
 
     let hash = argon2
         .hash_password(password.as_bytes(), &salt)
@@ -146,8 +152,8 @@ pub async fn remove_user(db: &DatabaseConnection, username: String) -> miette::R
     Ok(())
 }
 
-fn verify_password(password: String, hash: String) -> miette::Result<bool> {
-    let hash = PasswordHash::new(&hash)
+fn verify_password(password: &str, hash: &str) -> miette::Result<bool> {
+    let hash = PasswordHash::new(hash)
         .map_err(|err| return miette!("Couldn't parse password hash: {}", err.to_string()))?;
 
     Ok(Argon2::default()
@@ -157,10 +163,10 @@ fn verify_password(password: String, hash: String) -> miette::Result<bool> {
 
 async fn authenticate(
     db: &DatabaseConnection,
-    AuthBasic((username, password)): AuthBasic,
+    auth: Authorization<Basic>,
 ) -> Result<(), StatusCode> {
     let user = users::Entity::find()
-        .filter(users::Column::Name.eq(username))
+        .filter(users::Column::Name.eq(auth.username()))
         .one(db)
         .await
         .ok()
@@ -168,7 +174,7 @@ async fn authenticate(
         .ok_or(StatusCode::UNAUTHORIZED)?;
 
     // Compare the provided password with the password hash stored in the database
-    let authorized = verify_password(password.ok_or(StatusCode::UNAUTHORIZED)?, user.password)
+    let authorized = verify_password(auth.password(), &user.password)
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if authorized {
@@ -182,16 +188,19 @@ async fn auth<B: std::marker::Send>(
     req: Request<B>,
     next: Next<B>,
 ) -> Result<Response, StatusCode> {
-    let mut req = RequestParts::new(req);
+    let req = RequestParts::new(req);
 
-    let auth = AuthBasic::from_request(&mut req).await.map_err(|e| e.0)?;
+    let auth = req
+        .headers()
+        .typed_get::<Authorization<Basic>>()
+        .ok_or(StatusCode::UNAUTHORIZED)?;
 
     let db: &DatabaseConnection = req
         .extensions()
         .get()
         .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    if let Err(error) = authenticate(db, auth.to_owned()).await {
+    if let Err(error) = authenticate(db, auth).await {
         Err(error)
     } else {
         let req = req
