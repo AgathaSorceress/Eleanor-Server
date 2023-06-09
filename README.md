@@ -26,6 +26,12 @@ A HTTP remote media server for the [Eleanor](https://github.com/AgathaSorceress/
 	./eleanor-server user remove username 
 	```
 
+## Development
+A testing server can be quickly set up in a temporary directory like this:
+```
+nix develop .#dev
+```
+
 ## REST API Implementation 
 
 `GET /`            → A binary messagepack-encoded list of tracks indexed by the server    
